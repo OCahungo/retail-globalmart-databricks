@@ -8,7 +8,8 @@
 
 #Technical Architecture
 
-To minimize costs while simulating a modern enterprise stack, we will utilize the Databricks Free Edition and Power BI Desktop.
+Only Databricks Free Edition and Power BI Desktop (or Tableau).
+
 - Ingestion (Source):
   - Data Source: Sample - Superstore.csv.
   - Ingest Pattern: Batch load into Databricks Volume
