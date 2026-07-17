@@ -10,7 +10,7 @@ from delta.tables import DeltaTable
 
 CSV_PATH = "/Volumes/bronze/superstore/raw_superstore/"
 
-BRONZE_TABLE = "bronze.superstore.raw_orders"
+BRONZE_TABLE = "bronze.superstore.raw_superstore"
 
 print(f" Reading from : {CSV_PATH}")
 print(f" Writing to   : {BRONZE_TABLE}")
@@ -31,11 +31,12 @@ df_raw.printSchema()
 df_bronze = (
     df_raw
     .withColumn("_ingest_timestamp", F.current_timestamp())  
-    .withColumn("_source_file", F.input_file_name())         
+    .withColumn("_source_file", F.col("_metadata.file_path"))         
 )
 
 print(" Metadata columns added: _ingest_timestamp, _source_file")
-df_bronze.limit(3).display()  
+
+#df_bronze.limit(3).display()  
 
 
 
@@ -50,6 +51,7 @@ if not spark.catalog.tableExists(BRONZE_TABLE):
         .format("delta")              
         .mode("overwrite")            
         .option("overwriteSchema", "true")
+        .option("delta.columnMapping.mode", "name")
         .saveAsTable(BRONZE_TABLE)
     )
     print(f" Bronze table created with {df_bronze.count():,} rows.")
@@ -87,4 +89,5 @@ print(f"Null Row IDs      : {df_check.filter(F.col('`Row ID`').isNull()).count()
 print(f"Distinct Row IDs  : {df_check.select('`Row ID`').distinct().count():,}")
 print()
 print("Sample data:")
-df_check.limit(5).display()
+
+#df_check.limit(5).display()
