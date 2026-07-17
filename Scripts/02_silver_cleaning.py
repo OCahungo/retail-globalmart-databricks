@@ -16,7 +16,7 @@ from pyspark.sql import functions as F
 from pyspark.sql.types import DateType
 
 # Source table (output from Notebook 01)
-BRONZE_TABLE = "bronze.superstore.raw_orders"
+BRONZE_TABLE = "bronze.superstore.raw_superstore"
 
 # Destination tables in Silver
 SILVER_FACT_TABLE      = "silver.superstore.fact_orders"
@@ -24,13 +24,14 @@ SILVER_DIM_CUSTOMERS   = "silver.superstore.dim_customers"
 SILVER_DIM_PRODUCTS    = "silver.superstore.dim_products"
 SILVER_DIM_DATE        = "silver.superstore.dim_date"
 
-print("cReading from:", BRONZE_TABLE)
+print("Reading from:", BRONZE_TABLE)
 
 
 
 df_bronze = spark.table(BRONZE_TABLE)
 
 print(f"Rows in Bronze: {df_bronze.count():,}")
+
 df_bronze.printSchema()
 
 df_renamed = (
@@ -66,18 +67,19 @@ df_typed = (
     # Convert date strings like "01/03/2017" to proper date objects
     .withColumn("order_date", F.to_date(F.col("order_date"), "M/d/yyyy"))
     .withColumn("ship_date",  F.to_date(F.col("ship_date"),  "M/d/yyyy"))
-    # Ensure numeric columns are the right type
-    .withColumn("sales_amount",   F.col("sales_amount").cast("double"))
-    .withColumn("order_quantity", F.col("order_quantity").cast("integer"))
-    .withColumn("discount_rate",  F.col("discount_rate").cast("double"))
-    .withColumn("profit_amount",  F.col("profit_amount").cast("double"))
+    # Ensure numeric columns are the right type (use try_cast to handle malformed values)
+    .withColumn("sales_amount",   F.expr("try_cast(sales_amount as double)"))
+    .withColumn("order_quantity", F.expr("try_cast(order_quantity as double)"))
+    .withColumn("discount_rate",  F.expr("try_cast(discount_rate as double)"))
+    .withColumn("profit_amount",  F.expr("try_cast(profit_amount as double)"))
     # Postal code stays as string (leading zeros, e.g. "01234")
     .withColumn("postal_code",    F.col("postal_code").cast("string"))
 )
 
 print(" Data types fixed.")
 print("Checking date sample:")
-df_typed.select("order_date", "ship_date").limit(3).display()
+
+#df_typed.select("order_date", "ship_date").limit(3).display()
 
 
 #Data Quality: Remove Bad Records
