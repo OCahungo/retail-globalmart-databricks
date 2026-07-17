@@ -1,22 +1,7 @@
 # =============================================================================
 # NOTEBOOK 03 — GOLD LAYER (Business Logic & Reporting)
 # GlobalMart Retail Intelligence Pipeline
-# =============================================================================
-# PURPOSE:
-#   Build the final reporting layer that Power BI will connect to.
-#   We create aggregated, ready-to-use tables/views that directly answer
-#   the three business questions:
-#     1. Which Product Sub-Categories have the lowest profit margins?
-#     2. What is the Average Days to Ship per Region?
-#     3. Who are the Top 10 Customers by total spend year-to-date?
-#
-# PREREQUISITE: Run Notebook 02 first.
-# =============================================================================
 
-
-# ---------------------------------------------------------------------------
-# CELL 1 — Imports and Config
-# ---------------------------------------------------------------------------
 
 from pyspark.sql import functions as F
 
@@ -36,13 +21,6 @@ GOLD_SHIPPING_PERFORMANCE = "gold.superstore.agg_shipping_performance_by_region"
 GOLD_TOP_CUSTOMERS        = "gold.superstore.agg_top_customers_by_spend"
 
 
-# COMMAND ----------
-
-
-# ---------------------------------------------------------------------------
-# CELL 2 — Read Silver Tables
-# ---------------------------------------------------------------------------
-
 fact      = spark.table(SILVER_FACT)
 customers = spark.table(SILVER_CUSTOMERS)
 products  = spark.table(SILVER_PRODUCTS)
@@ -55,39 +33,16 @@ print(f"  dim_products  : {products.count():,} rows")
 print(f"  dim_date      : {dates.count():,} rows")
 
 
-# COMMAND ----------
-
-
-# ---------------------------------------------------------------------------
-# CELL 3 — Gold: Dimension Tables (Copy with business-ready names)
-# ---------------------------------------------------------------------------
-# For the Gold layer, we promote the Silver dimension tables as-is.
-# They're already clean. We just persist them into the gold catalog.
-
 customers.write.format("delta").mode("overwrite").saveAsTable(GOLD_DIM_CUSTOMER)
 products.write.format("delta").mode("overwrite").saveAsTable(GOLD_DIM_PRODUCT)
 dates.write.format("delta").mode("overwrite").saveAsTable(GOLD_DIM_DATE)
 
-print("✅ Gold dimension tables written:")
+print(" Gold dimension tables written:")
 print(f"   {GOLD_DIM_CUSTOMER}")
 print(f"   {GOLD_DIM_PRODUCT}")
 print(f"   {GOLD_DIM_DATE}")
 
 
-# COMMAND ----------
-
-
-# ---------------------------------------------------------------------------
-# CELL 4 — Gold: fact_sales (Enriched Fact Table with Derived Metrics)
-# ---------------------------------------------------------------------------
-# We join all the Silver tables together to produce a single, wide fact table.
-# We also calculate DERIVED METRICS — values that don't exist in the raw data
-# but are calculated from existing columns.
-#
-# Key derived metric:
-#   delivery_days = number of calendar days between order date and ship date
-
-# Step 1: Join fact with all dimensions
 df_joined = (
     fact
     .join(customers, on="customer_key", how="left")
@@ -117,7 +72,7 @@ fact_sales = (
             F.when(F.col("sales_amount") != 0,
                    (F.col("profit_amount") / F.col("sales_amount")) * 100
             ).otherwise(0),
-            2   # Round to 2 decimal places
+            2  
         )
     )
     .withColumn(
@@ -126,29 +81,22 @@ fact_sales = (
     )
     # Select final columns in a clean, logical order
     .select(
-        # Keys
         "row_id", "order_id",
-        # Date information
         "order_date", "ship_date", "order_year", "order_quarter",
         "order_month_number", "order_month_name",
-        # Customer information
         "customer_key", "customer_name", "customer_segment",
         "city", "state", "region", "country",
-        # Product information
         "product_key", "product_name", "product_category", "product_sub_category",
-        # Order details
         "shipping_mode", "order_quantity",
-        # Financial metrics
         "sales_amount", "discount_rate", "discounted_sales_amount",
         "profit_amount", "profit_margin_pct",
-        # Derived logistics metric
         "delivery_days"
     )
 )
 
 fact_sales.write.format("delta").mode("overwrite").saveAsTable(GOLD_FACT_SALES)
 
-print(f"✅ Gold fact_sales written: {fact_sales.count():,} rows → {GOLD_FACT_SALES}")
+print(f" Gold fact_sales written: {fact_sales.count():,} rows → {GOLD_FACT_SALES}")
 print()
 print("Preview:")
 fact_sales.select(
@@ -157,15 +105,7 @@ fact_sales.select(
 ).limit(5).display()
 
 
-# COMMAND ----------
-
-
-# ---------------------------------------------------------------------------
-# CELL 5 — Gold Aggregate 1: Profitability by Product Sub-Category
-# ---------------------------------------------------------------------------
-# Business Question: Which Product Sub-Categories have the lowest profit margins?
-#
-# This table is pre-aggregated for Power BI, so the dashboard loads fast.
+# Gold Aggregate 1: Profitability by Product Sub-Category
 
 agg_profitability = (
     fact_sales
@@ -176,27 +116,20 @@ agg_profitability = (
         F.count("row_id").alias("total_orders"),
         F.round(
             (F.sum("profit_amount") / F.sum("sales_amount")) * 100, 2
-        ).alias("profit_margin_pct")   # Overall margin for the sub-category
+        ).alias("profit_margin_pct")  
     )
-    .orderBy("profit_margin_pct")       # Lowest margin first (worst performers at top)
+    .orderBy("profit_margin_pct")      
 )
 
 agg_profitability.write.format("delta").mode("overwrite").saveAsTable(GOLD_PROFITABILITY)
 
-print(f"✅ agg_profitability_by_subcategory written → {GOLD_PROFITABILITY}")
+print(f" agg_profitability_by_subcategory written → {GOLD_PROFITABILITY}")
 print()
 print("Bottom 5 sub-categories by profit margin:")
 agg_profitability.limit(5).display()
 
 
-# COMMAND ----------
-
-
-# ---------------------------------------------------------------------------
-# CELL 6 — Gold Aggregate 2: Shipping Performance by Region
-# ---------------------------------------------------------------------------
-# Business Question: What is the Average Days to Ship per Region?
-# (Identify regional bottlenecks in the supply chain)
+#Gold Aggregate 2: Shipping Performance by Region
 
 agg_shipping = (
     fact_sales
@@ -212,21 +145,12 @@ agg_shipping = (
 
 agg_shipping.write.format("delta").mode("overwrite").saveAsTable(GOLD_SHIPPING_PERFORMANCE)
 
-print(f"✅ agg_shipping_performance_by_region written → {GOLD_SHIPPING_PERFORMANCE}")
+print(f" agg_shipping_performance_by_region written → {GOLD_SHIPPING_PERFORMANCE}")
 print()
 agg_shipping.display()
 
 
-# COMMAND ----------
-
-
-# ---------------------------------------------------------------------------
-# CELL 7 — Gold Aggregate 3: Top Customers by Total Spend (Year-to-Date)
-# ---------------------------------------------------------------------------
-# Business Question: Who are our Top 10 Customers by total spend year-to-date?
-#
-# NOTE: "Year-to-date" means the current year in the dataset.
-#       We filter to the most recent year available in the data.
+# Gold Aggregate 3: Top Customers by Total Spend (Year-to-Date)
 
 # Find the latest year in the dataset
 latest_year = fact_sales.agg(F.max("order_year")).collect()[0][0]
@@ -234,7 +158,7 @@ print(f"Latest year found in data: {latest_year}  → filtering to year-to-date"
 
 agg_top_customers = (
     fact_sales
-    .filter(F.col("order_year") == latest_year)   # Year-to-date filter
+    .filter(F.col("order_year") == latest_year)   
     .groupBy("customer_key", "customer_name", "customer_segment", "region")
     .agg(
         F.round(F.sum("sales_amount"),  2).alias("total_spend"),
@@ -242,27 +166,20 @@ agg_top_customers = (
         F.count("order_id").alias("total_orders"),
         F.countDistinct("order_id").alias("distinct_orders")
     )
-    .orderBy(F.desc("total_spend"))     # Highest spenders first
-    .limit(10)                          # Only Top 10
-    .withColumn("rank", F.monotonically_increasing_id() + 1)  # Add rank column
+    .orderBy(F.desc("total_spend"))    
+    .limit(10)                          
+    .withColumn("rank", F.monotonically_increasing_id() + 1) 
 )
 
 agg_top_customers.write.format("delta").mode("overwrite").saveAsTable(GOLD_TOP_CUSTOMERS)
 
-print(f"✅ agg_top_customers_by_spend written → {GOLD_TOP_CUSTOMERS}")
+print(f" agg_top_customers_by_spend written → {GOLD_TOP_CUSTOMERS}")
 print()
 print(f"Top 10 Customers in {latest_year}:")
 agg_top_customers.select("rank", "customer_name", "customer_segment", "region", "total_spend").display()
 
 
-# COMMAND ----------
-
-
-# ---------------------------------------------------------------------------
-# CELL 8 — KPI Summary (for the Power BI KPI Card)
-# ---------------------------------------------------------------------------
-# The dashboard requirement says: show a "Total Profit" KPI card at the top.
-# This query gives you the headline numbers.
+# KPI Summary (for the Power BI KPI Card)
 
 print("=" * 60)
 print("DASHBOARD KPI SUMMARY")
@@ -279,7 +196,7 @@ kpis = fact_sales.agg(
 kpis.display()
 
 print()
-print("✅ Gold layer complete! All tables are ready for Power BI.")
+print(" Gold layer complete! All tables are ready for Power BI.")
 print()
 print("Tables to connect in Power BI:")
 print(f"  1. {GOLD_FACT_SALES}           ← main fact table")
