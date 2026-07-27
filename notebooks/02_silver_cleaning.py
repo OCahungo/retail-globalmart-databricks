@@ -15,6 +15,8 @@
 from pyspark.sql import functions as F
 from pyspark.sql.types import DateType
 
+
+
 # Source table (output from Notebook 01)
 BRONZE_TABLE = "bronze.superstore.raw_superstore"
 
@@ -24,9 +26,8 @@ SILVER_DIM_CUSTOMERS   = "silver.superstore.dim_customers"
 SILVER_DIM_PRODUCTS    = "silver.superstore.dim_products"
 SILVER_DIM_DATE        = "silver.superstore.dim_date"
 
+
 print("Reading from:", BRONZE_TABLE)
-
-
 
 df_bronze = spark.table(BRONZE_TABLE)
 
@@ -36,23 +37,23 @@ df_bronze.printSchema()
 
 df_renamed = (
     df_bronze
-    .withColumnRenamed("Row ID",        "row_id")
-    .withColumnRenamed("Order ID",      "order_id")
-    .withColumnRenamed("Order Date",    "order_date")
-    .withColumnRenamed("Ship Date",     "ship_date")
-    .withColumnRenamed("Ship Mode",     "shipping_mode")
-    .withColumnRenamed("Customer ID",   "customer_id_raw")   
-    .withColumnRenamed("Customer Name", "customer_name")
+    .withColumnRenamed("Row_ID",        "row_id")
+    .withColumnRenamed("Order_ID",      "order_id")
+    .withColumnRenamed("Order_Date",    "order_date")
+    .withColumnRenamed("Ship_Date",     "ship_date")
+    .withColumnRenamed("Ship_Mode",     "shipping_mode")
+    .withColumnRenamed("Customer_ID",   "customer_id_raw")   
+    .withColumnRenamed("Customer_Name", "customer_name")
     .withColumnRenamed("Segment",       "customer_segment")
     .withColumnRenamed("Country",       "country")
     .withColumnRenamed("City",          "city")
     .withColumnRenamed("State",         "state")
-    .withColumnRenamed("Postal Code",   "postal_code")
+    .withColumnRenamed("Postal_Code",   "postal_code")
     .withColumnRenamed("Region",        "region")
-    .withColumnRenamed("Product ID",    "product_id_raw")
+    .withColumnRenamed("Product_ID",    "product_id_raw")
     .withColumnRenamed("Category",      "product_category")
     .withColumnRenamed("Sub-Category",  "product_sub_category")
-    .withColumnRenamed("Product Name",  "product_name")
+    .withColumnRenamed("Product_Name",  "product_name")
     .withColumnRenamed("Sales",         "sales_amount")
     .withColumnRenamed("Quantity",      "order_quantity")
     .withColumnRenamed("Discount",      "discount_rate")
@@ -64,22 +65,17 @@ print(f" Columns renamed. Total columns: {len(df_renamed.columns)}")
 
 df_typed = (
     df_renamed
-    # Convert date strings like "01/03/2017" to proper date objects
     .withColumn("order_date", F.to_date(F.col("order_date"), "M/d/yyyy"))
     .withColumn("ship_date",  F.to_date(F.col("ship_date"),  "M/d/yyyy"))
-    # Ensure numeric columns are the right type (use try_cast to handle malformed values)
     .withColumn("sales_amount",   F.expr("try_cast(sales_amount as double)"))
     .withColumn("order_quantity", F.expr("try_cast(order_quantity as double)"))
     .withColumn("discount_rate",  F.expr("try_cast(discount_rate as double)"))
     .withColumn("profit_amount",  F.expr("try_cast(profit_amount as double)"))
-    # Postal code stays as string (leading zeros, e.g. "01234")
     .withColumn("postal_code",    F.col("postal_code").cast("string"))
 )
 
 print(" Data types fixed.")
 print("Checking date sample:")
-
-#df_typed.select("order_date", "ship_date").limit(3).display()
 
 
 #Data Quality: Remove Bad Records
@@ -94,7 +90,6 @@ rows_removed = rows_before - rows_after
 print(f"Rows before filter : {rows_before:,}")
 print(f"Rows after filter  : {rows_after:,}")
 print(f"Rows removed       : {rows_removed:,}  (returns/bad records)")
-
 
 
 # Handle Null Values

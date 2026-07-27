@@ -4,6 +4,7 @@
 
 
 from pyspark.sql import functions as F
+from pyspark.sql.window import Window
 
 # Silver source tables
 SILVER_FACT      = "silver.superstore.fact_orders"
@@ -99,10 +100,7 @@ fact_sales.write.format("delta").mode("overwrite").saveAsTable(GOLD_FACT_SALES)
 print(f" Gold fact_sales written: {fact_sales.count():,} rows → {GOLD_FACT_SALES}")
 print()
 print("Preview:")
-fact_sales.select(
-    "order_id", "customer_name", "product_sub_category",
-    "sales_amount", "profit_margin_pct", "delivery_days"
-).limit(5).display()
+#fact_sales.select(   "order_id", "customer_name", "product_sub_category", "sales_amount", "profit_margin_pct", "delivery_days").limit(5).display()
 
 
 # Gold Aggregate 1: Profitability by Product Sub-Category
@@ -126,7 +124,7 @@ agg_profitability.write.format("delta").mode("overwrite").saveAsTable(GOLD_PROFI
 print(f" agg_profitability_by_subcategory written → {GOLD_PROFITABILITY}")
 print()
 print("Bottom 5 sub-categories by profit margin:")
-agg_profitability.limit(5).display()
+#agg_profitability.limit(5).display()
 
 
 #Gold Aggregate 2: Shipping Performance by Region
@@ -147,13 +145,15 @@ agg_shipping.write.format("delta").mode("overwrite").saveAsTable(GOLD_SHIPPING_P
 
 print(f" agg_shipping_performance_by_region written → {GOLD_SHIPPING_PERFORMANCE}")
 print()
-agg_shipping.display()
+#agg_shipping.display()
 
 
 # Gold Aggregate 3: Top Customers by Total Spend (Year-to-Date)
 
 # Find the latest year in the dataset
-latest_year = fact_sales.agg(F.max("order_year")).collect()[0][0]
+latest_year = dates.agg(F.max("year")).collect()[0][0]
+print(f"Latest year found in data: {latest_year}  → filtering to year-to-date")
+
 print(f"Latest year found in data: {latest_year}  → filtering to year-to-date")
 
 agg_top_customers = (
@@ -167,16 +167,21 @@ agg_top_customers = (
         F.countDistinct("order_id").alias("distinct_orders")
     )
     .orderBy(F.desc("total_spend"))    
-    .limit(10)                          
-    .withColumn("rank", F.monotonically_increasing_id() + 1) 
+    .limit(10) 
 )
 
-agg_top_customers.write.format("delta").mode("overwrite").saveAsTable(GOLD_TOP_CUSTOMERS)
+agg_top_customers_final = (
+    agg_top_customers
+    .repartition(1)
+    .withColumn("rank", (F.monotonically_increasing_id() + 1).cast("integer")) 
+)
+
+agg_top_customers_final.write.format("delta").mode("overwrite").saveAsTable(GOLD_TOP_CUSTOMERS)
 
 print(f" agg_top_customers_by_spend written → {GOLD_TOP_CUSTOMERS}")
 print()
 print(f"Top 10 Customers in {latest_year}:")
-agg_top_customers.select("rank", "customer_name", "customer_segment", "region", "total_spend").display()
+#agg_top_customers.select("rank", "customer_name", "customer_segment", "region", "total_spend").display()
 
 
 # KPI Summary (for the Power BI KPI Card)
@@ -193,7 +198,7 @@ kpis = fact_sales.agg(
     F.round(F.avg("delivery_days"), 1).alias("Avg Delivery Days")
 )
 
-kpis.display()
+#kpis.display()
 
 print()
 print(" Gold layer complete! All tables are ready for Power BI.")
