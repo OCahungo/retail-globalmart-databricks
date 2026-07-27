@@ -1,4 +1,3 @@
-# =============================================================================
 # NOTEBOOK 03 — GOLD LAYER (Business Logic & Reporting)
 # GlobalMart Retail Intelligence Pipeline
 
