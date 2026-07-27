@@ -1,12 +1,6 @@
 # 📊 GlobalMart Retail Intelligence Pipeline
 ### End-to-End Analytics Engineering Pipeline with PySpark, Delta Lake & Power BI
 
-![Spark](https://shields.io)
-![Databricks](https://shields.io)
-![DeltaLake](https://shields.io)
-![PowerBI](https://shields.io)
-
-
 ---
 
 ## Project Summary & Business Impact
