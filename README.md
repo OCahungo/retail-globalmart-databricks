@@ -1,6 +1,8 @@
 # 📊 GlobalMart Retail Intelligence Pipeline
 ### End-to-End Analytics Engineering Pipeline with PySpark, Delta Lake & Power BI
 
+%md-sandbox
+
 ![Spark](https://shields.io)
 ![Databricks](https://shields.io)
 ![DeltaLake](https://shields.io)
@@ -57,7 +59,7 @@ df_with_clean_cols = df_raw.select(clean_columns)
 
 ---
 
-## 🚀 How to Run the Project
+## How to Run the Project
 
 1. Import the source code scripts located in the `/notebooks` folder into your Databricks Workspace.
 2. Upload the raw dataset `Sample - Superstore.csv` into your configured Bronze Databricks Volume.
