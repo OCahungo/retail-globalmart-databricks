@@ -1,8 +1,3 @@
-# =============================================================================
-# NENVIRONMENT SETUP
-# GlobalMart Retail Intelligence Pipeline
-# =============================================================================
-# PURPOSE:
 #   (bronze, silver, gold) and the schemas/volumes you will need before running any other notebook.
 
 
