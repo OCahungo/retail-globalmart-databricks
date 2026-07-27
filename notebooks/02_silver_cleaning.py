@@ -1,9 +1,6 @@
-# =============================================================================
 # NOTEBOOK 02 — SILVER LAYER (Cleaning & Dimension Tables)
 # GlobalMart Retail Intelligence Pipeline
-# =============================================================================
-# PURPOSE:
-#   Take the raw Bronze data and:
+
 #     1. Rename columns to business-friendly names (no abbreviations/acronyms)
 #     2. Fix data types (dates as proper timestamps, not strings)
 #     3. Remove bad data (negative quantities = returns)
