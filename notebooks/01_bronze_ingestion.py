@@ -3,8 +3,6 @@ from pyspark.sql import functions as F
 CSV_PATH = "/Volumes/bronze/superstore/raw_superstore/"
 BRONZE_TABLE = "bronze.superstore.raw_superstore"
 
-spark.sql(f"DROP TABLE IF EXISTS {BRONZE_TABLE}")
-
 print(f" Reading from : {CSV_PATH}")
 print(f" Writing to   : {BRONZE_TABLE}")
 
@@ -28,9 +26,13 @@ df_bronze = (
     df_bronze
     .write
     .format("delta")              
-    .mode("overwrite")  #Em sistemas de produção normalmente é para usar append e não overwrite na camada bronze, mas eu estou a testar apenas com um ficheiro por essa razão estou a utilizar o overwrite método         
+    .mode("append")         
     .option("overwriteSchema", "true") 
     .saveAsTable(BRONZE_TABLE)
 )
 
 print(f" Data successfully landed into Bronze table: {BRONZE_TABLE}")
+
+
+
+display(df_bronze)
